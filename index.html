@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Deckhand — AI study cards</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#161B2E;
+    --ink-2:#1F2740;
+    --paper:#F1E8D6;
+    --paper-shade:#E2D5B8;
+    --paper-line:#D8C9A6;
+    --gold:#C08A3E;
+    --gold-deep:#8F6425;
+    --teal:#3F8F86;
+    --teal-deep:#245751;
+    --rust:#B5573A;
+    --text-on-ink:#EDE6D2;
+    --text-on-ink-dim:#9AA0B8;
+    --text-ink:#2A2213;
+    --text-ink-dim:#6B5F44;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--text-on-ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px 80px;
+  }
+  .wrap{width:100%;max-width:520px;}
+
+  h1,h2,.serif{font-family:'Fraunces', serif;}
+
+  header.top{margin-bottom:36px;}
+  header.top .mark{
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    letter-spacing:0.02em;
+    color:var(--gold);
+    margin:0 0 6px;
+  }
+  header.top h1{
+    font-size:34px;
+    font-weight:500;
+    line-height:1.15;
+    margin:0 0 10px;
+    color:var(--text-on-ink);
+  }
+  header.top p{
+    margin:0;
+    color:var(--text-on-ink-dim);
+    font-size:15px;
+    line-height:1.6;
+    max-width:38ch;
+  }
+
+  /* ---- Setup screen ---- */
+  .panel{
+    background:var(--paper);
+    border-radius:3px;
+    padding:28px 26px 26px;
+    box-shadow:0 1px 0 rgba(0,0,0,0.4), 0 18px 40px -20px rgba(0,0,0,0.6);
+  }
+  label.field-label{
+    display:block;
+    font-size:13px;
+    color:var(--text-ink-dim);
+    margin:0 0 8px;
+  }
+  textarea#notes{
+    width:100%;
+    min-height:170px;
+    resize:vertical;
+    border:none;
+    background:
+      repeating-linear-gradient(var(--paper) 0px, var(--paper) 27px, var(--paper-line) 28px);
+    line-height:28px;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:15px;
+    color:var(--text-ink);
+    padding:2px 4px 2px 2px;
+    outline:none;
+  }
+  textarea#notes::placeholder{color:var(--text-ink-dim);}
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:20px;
+    gap:16px;
+  }
+  .count-control{display:flex;align-items:center;gap:10px;}
+  .count-control span{font-size:13px;color:var(--text-ink-dim);}
+  .count-control input[type=number]{
+    width:56px;
+    border:1px solid var(--paper-line);
+    background:transparent;
+    color:var(--text-ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:15px;
+    padding:6px 8px;
+    border-radius:2px;
+  }
+  button{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px;
+    font-weight:500;
+    border:none;
+    cursor:pointer;
+    border-radius:2px;
+    padding:12px 22px;
+    transition:transform 0.12s ease, background 0.15s ease;
+  }
+  button:active{transform:scale(0.97);}
+  button.primary{background:var(--gold);color:#2A1D08;}
+  button.primary:hover{background:#CE9A50;}
+  button.ghost{background:transparent;color:var(--text-on-ink);border:1px solid rgba(237,230,210,0.35);}
+  button.ghost:hover{border-color:rgba(237,230,210,0.6);}
+  button.ghost-dark{background:transparent;color:var(--text-ink);border:1px solid var(--paper-line);}
+  button:disabled{opacity:0.5;cursor:default;}
+
+  .error-msg{
+    color:var(--rust);
+    font-size:13px;
+    margin-top:14px;
+    display:none;
+  }
+
+  /* ---- Loading ---- */
+  #loading{display:none;text-align:center;padding:60px 0;}
+  .spinner{
+    width:26px;height:26px;
+    border:2px solid rgba(237,230,210,0.25);
+    border-top-color:var(--gold);
+    border-radius:50%;
+    margin:0 auto 18px;
+    animation:spin 0.8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #loading p{color:var(--text-on-ink-dim);font-size:14px;}
+
+  /* ---- Review screen ---- */
+  #review{display:none;}
+  .review-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:22px;
+  }
+  .review-head .count{font-size:14px;color:var(--text-on-ink-dim);}
+  .review-head .topic{
+    font-family:'Fraunces', serif;
+    font-size:19px;
+    color:var(--text-on-ink);
+  }
+  .dots{display:flex;gap:6px;margin-bottom:26px;flex-wrap:wrap;}
+  .dot{width:7px;height:7px;border-radius:50%;background:rgba(237,230,210,0.22);}
+  .dot.done-good{background:var(--teal);}
+  .dot.done-again{background:var(--rust);}
+  .dot.current{background:var(--gold);}
+
+  .stack{position:relative;height:300px;margin-bottom:26px;}
+  .stack .layer{
+    position:absolute;
+    inset:0;
+    background:var(--paper-shade);
+    border-radius:3px;
+  }
+  .stack .layer.l2{transform:rotate(-3deg) translateY(6px);}
+  .stack .layer.l1{transform:rotate(2deg) translateY(3px);background:#EAD FB8;background:#E9DDBE;}
+
+  .card{
+    position:absolute;
+    inset:0;
+    perspective:1400px;
+    cursor:pointer;
+  }
+  .card-inner{
+    position:relative;
+    width:100%;height:100%;
+    transform-style:preserve-3d;
+    transition:transform 0.5s cubic-bezier(.2,.7,.3,1);
+  }
+  .card.flipped .card-inner{transform:rotateY(180deg);}
+  .face{
+    position:absolute;inset:0;
+    backface-visibility:hidden;
+    border-radius:3px;
+    background:var(--paper);
+    box-shadow:0 1px 0 rgba(0,0,0,0.4), 0 20px 44px -22px rgba(0,0,0,0.65);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:36px 34px;
+  }
+  .face .kicker{
+    font-size:12px;
+    color:var(--gold-deep);
+    margin:0 0 14px;
+  }
+  .face p.content{
+    font-family:'Fraunces', serif;
+    font-size:22px;
+    line-height:1.4;
+    color:var(--text-ink);
+    margin:0;
+  }
+  .face.back{transform:rotateY(180deg);}
+  .face .hint{
+    position:absolute;
+    bottom:20px;left:34px;
+    font-size:12px;
+    color:var(--text-ink-dim);
+  }
+
+  .review-actions{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.2s ease;
+  }
+  .review-actions.show{opacity:1;pointer-events:auto;}
+  .review-actions button{flex:1;max-width:200px;}
+  button.again{background:transparent;color:var(--rust);border:1px solid rgba(181,87,58,0.5);}
+  button.again:hover{background:rgba(181,87,58,0.12);}
+  button.good{background:var(--teal);color:#0B1F1C;}
+  button.good:hover{background:#4EA79C;}
+
+  .skip-row{text-align:center;margin-top:18px;}
+  .skip-row button{background:none;border:none;color:var(--text-on-ink-dim);font-size:13px;padding:4px;}
+
+  /* ---- Summary ---- */
+  #summary{display:none;text-align:center;}
+  #summary .big{
+    font-family:'Fraunces', serif;
+    font-size:42px;
+    margin:8px 0 4px;
+    color:var(--text-on-ink);
+  }
+  #summary .sub{color:var(--text-on-ink-dim);font-size:14px;margin-bottom:32px;}
+  .summary-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+  @media (max-width:480px){
+    .stack{height:280px;}
+    .face{padding:28px 24px;}
+    .face p.content{font-size:19px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <p class="mark">Deckhand</p>
+    <h1>Turn notes into a deck</h1>
+    <p>Paste what you're studying — a topic, a paragraph, a page of notes. Deckhand writes the flashcards; you do the remembering.</p>
+  </header>
+
+  <div id="setup" class="panel">
+    <label class="field-label" for="notes">What are you studying?</label>
+    <textarea id="notes" placeholder="e.g. The causes of the French Revolution, or paste your lecture notes here..."></textarea>
+    <div class="row">
+      <div class="count-control">
+        <span>Cards</span>
+        <input type="number" id="count" value="8" min="4" max="12">
+      </div>
+      <button class="primary" id="genBtn">Generate deck</button>
+    </div>
+    <p class="error-msg" id="errorMsg"></p>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <p id="loadingText">Reading your notes...</p>
+  </div>
+
+  <div id="review">
+    <div class="review-head">
+      <span class="topic" id="topicLabel">Deck</span>
+      <span class="count" id="countLabel">1 of 8</span>
+    </div>
+    <div class="dots" id="dots"></div>
+    <div class="stack">
+      <div class="layer l2"></div>
+      <div class="layer l1"></div>
+      <div class="card" id="card">
+        <div class="card-inner" id="cardInner">
+          <div class="face front">
+            <p class="kicker">Question</p>
+            <p class="content" id="qText"></p>
+            <p class="hint">Tap the card to reveal the answer</p>
+          </div>
+          <div class="face back">
+            <p class="kicker">Answer</p>
+            <p class="content" id="aText"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="review-actions" id="reviewActions">
+      <button class="again" id="againBtn">Still learning</button>
+      <button class="good" id="goodBtn">Got it</button>
+    </div>
+    <div class="skip-row">
+      <button id="quitBtn">End review early</button>
+    </div>
+  </div>
+
+  <div id="summary">
+    <p class="mark serif" style="color:var(--gold);font-size:14px;">Deck complete</p>
+    <p class="big" id="summaryScore">6 / 8</p>
+    <p class="sub" id="summarySub">marked as known on the first pass</p>
+    <div class="summary-actions">
+      <button class="ghost" id="reviewMissedBtn">Review missed cards</button>
+      <button class="primary" id="newDeckBtn">New deck</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const setup = $('setup'), loading = $('loading'), review = $('review'), summary = $('summary');
+  const genBtn = $('genBtn'), notesEl = $('notes'), countEl = $('count'), errorMsg = $('errorMsg');
+  const loadingText = $('loadingText');
+  const topicLabel = $('topicLabel'), countLabel = $('countLabel'), dotsEl = $('dots');
+  const card = $('card'), cardInner = $('cardInner'), qText = $('qText'), aText = $('aText');
+  const reviewActions = $('reviewActions'), againBtn = $('againBtn'), goodBtn = $('goodBtn'), quitBtn = $('quitBtn');
+  const summaryScore = $('summaryScore'), summarySub = $('summarySub');
+  const reviewMissedBtn = $('reviewMissedBtn'), newDeckBtn = $('newDeckBtn');
+
+  let deck = [];        // full deck for this pass
+  let idx = 0;
+  let flipped = false;
+  let results = [];     // 'good' | 'again' per card this pass
+  let missedPool = [];  // cards to re-run
+  let topic = 'Deck';
+
+  function show(el){ [setup,loading,review,summary].forEach(e => e.style.display = 'none'); el.style.display = 'block'; }
+
+  async function generate(notes, count){
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes, count })
+    });
+    const data = await response.json();
+    if(!response.ok) throw new Error(data.error || 'Request failed');
+    if(!Array.isArray(data.cards) || data.cards.length === 0) throw new Error('Empty deck');
+    return data.cards;
+  }
+
+  function renderDots(){
+    dotsEl.innerHTML = '';
+    for(let i=0;i<deck.length;i++){
+      const d = document.createElement('div');
+      d.className = 'dot';
+      if(i < results.length){
+        d.classList.add(results[i] === 'good' ? 'done-good' : 'done-again');
+      } else if(i === idx){
+        d.classList.add('current');
+      }
+      dotsEl.appendChild(d);
+    }
+  }
+
+  function renderCard(){
+    flipped = false;
+    card.classList.remove('flipped');
+    reviewActions.classList.remove('show');
+    const c = deck[idx];
+    qText.textContent = c.q;
+    aText.textContent = c.a;
+    countLabel.textContent = (idx+1) + ' of ' + deck.length;
+    renderDots();
+  }
+
+  function startReview(cards, label){
+    deck = cards;
+    idx = 0;
+    results = [];
+    topic = label || topic;
+    topicLabel.textContent = topic;
+    show(review);
+    renderCard();
+  }
+
+  card.addEventListener('click', () => {
+    if(flipped) return;
+    flipped = true;
+    card.classList.add('flipped');
+    reviewActions.classList.add('show');
+  });
+
+  function nextCard(mark){
+    results.push(mark);
+    if(mark === 'again') missedPool.push(deck[idx]);
+    if(idx < deck.length - 1){
+      idx++;
+      renderCard();
+    } else {
+      finishReview();
+    }
+  }
+
+  againBtn.addEventListener('click', () => nextCard('again'));
+  goodBtn.addEventListener('click', () => nextCard('good'));
+
+  quitBtn.addEventListener('click', () => {
+    // count remaining as not-yet-known, just stop
+    finishReview();
+  });
+
+  function finishReview(){
+    const goodCount = results.filter(r => r === 'good').length;
+    summaryScore.textContent = goodCount + ' / ' + deck.length;
+    summarySub.textContent = goodCount === deck.length
+      ? 'every card known on this pass'
+      : 'marked as known on this pass';
+    reviewMissedBtn.style.display = missedPool.length ? 'inline-block' : 'none';
+    show(summary);
+  }
+
+  reviewMissedBtn.addEventListener('click', () => {
+    const pool = missedPool;
+    missedPool = [];
+    startReview(pool, topic);
+  });
+
+  newDeckBtn.addEventListener('click', () => {
+    missedPool = [];
+    notesEl.value = '';
+    errorMsg.style.display = 'none';
+    show(setup);
+  });
+
+  genBtn.addEventListener('click', async () => {
+    const notes = notesEl.value.trim();
+    let count = parseInt(countEl.value, 10);
+    if(!notes){
+      errorMsg.textContent = 'Add a topic or some notes first.';
+      errorMsg.style.display = 'block';
+      return;
+    }
+    if(isNaN(count) || count < 4) count = 4;
+    if(count > 12) count = 12;
+    errorMsg.style.display = 'none';
+    loadingText.textContent = 'Reading your notes...';
+    show(loading);
+    try{
+      const cards = await generate(notes, count);
+      let label = 'Deck';
+      if(cards[0] && cards[0].topic){ label = cards[0].topic; }
+      const clean = cards.map(c => ({ q: c.q, a: c.a }));
+      missedPool = [];
+      startReview(clean, label);
+    }catch(err){
+      show(setup);
+      errorMsg.textContent = "Couldn't generate that deck. Try shorter notes or try again.";
+      errorMsg.style.display = 'block';
+    }
+  });
+
+  show(setup);
+})();
+</script>
+</body>
+</html>
